@@ -1,12 +1,14 @@
+#voice_service.py
+
 import speech_recognition as sr
 import streamlit as st
 
 class VoiceService:
     """Handles voice recognition functionality"""
-    
+
     def __init__(self):
         self.recognizer = sr.Recognizer()
-    
+
     def record_and_transcribe(self) -> str:
         """Record audio and convert to text"""
         with sr.Microphone() as source:
