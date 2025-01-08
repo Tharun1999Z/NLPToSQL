@@ -1,116 +1,87 @@
+#ui_componets.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 
 class UIComponents:
+
     @staticmethod
-    def create_sql_visualization(df: pd.DataFrame):
-        """Create appropriate visualization for SQL query results"""
-        if len(df) == 1 and len(df.columns) == 1:
-            value = df.iloc[0, 0]
-            fig = go.Figure()
-            fig.add_trace(go.Indicator(
-                mode="number",
-                value=value,
-                title={"text": df.columns[0]},
-                number={"font": {"size": 50}}
-            ))
-            fig.update_layout(height=300)
-            return fig
-            
-        # Handle time series or categorical data
-        elif len(df) > 1:
-            numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns
-            if len(numeric_cols) > 0:
-                y_col = numeric_cols[0]
-                x_col = [col for col in df.columns if col != y_col][0] if len(df.columns) > 1 else df.index
-                
-                fig = px.bar(df, x=x_col, y=y_col,
-                           title=f"{y_col} Distribution",
-                           labels={y_col: y_col.replace('_', ' ').title(),
-                                  x_col: x_col.replace('_', ' ').title()})
-                fig.update_layout(height=500)
-                return fig
-        
-        return None
+    def display_header():
+        """Display the application header."""
+        st.title("📝 Zion AI Chatbot")
+
+    @staticmethod
+    def display_input_section(value=""):
+        """Display the input section for user query."""
+        st.header("Speak or Type your Query")
+        return st.text_area("Enter your query here:", value=value, height=100)
+
+    @staticmethod
+    def display_generated_sql(sql_query: str):
+        """Display the generated SQL query."""
+        st.subheader("Generated SQL Query")
+        st.code(sql_query, language="sql")
 
     @staticmethod
     def display_results(result_df: pd.DataFrame):
-        if result_df is not None and len(result_df) > 0:
-            st.metric("Number of Records", f"{len(result_df):,}")
-            
-            # Display data
+        """Display the query results as a DataFrame and the record count."""
+        if result_df is not None and not result_df.empty:
+            st.success(f"Query executed successfully! {len(result_df):,} records found.")
+
+            # Display the DataFrame
             st.dataframe(result_df, use_container_width=True)
-            
-            st.subheader("Query Visualization")
-            fig = UIComponents.create_sql_visualization(result_df)
-            if fig:
-                st.plotly_chart(fig, use_container_width=True)
-            
-            if len(result_df) > 1 and len(result_df.columns) > 1:
-                plot_type = st.selectbox(
-                    "Change visualization type",
-                    ["bar", "line", "scatter", "pie"],
-                    key="plot_type"
-                )
-                if plot_type != "bar":
-                    numeric_cols = result_df.select_dtypes(include=['float64', 'int64']).columns
-                    if len(numeric_cols) > 0:
-                        y_col = numeric_cols[0]
-                        x_col = [col for col in result_df.columns if col != y_col][0]
-                        
-                        if plot_type == "line":
-                            fig = px.line(result_df, x=x_col, y=y_col)
-                        elif plot_type == "scatter":
-                            fig = px.scatter(result_df, x=x_col, y=y_col)
-                        elif plot_type == "pie":
-                            fig = px.pie(result_df, values=y_col, names=x_col)
-                        
-                        st.plotly_chart(fig, use_container_width=True)
+
+            # Button to show graph
+            if st.button("Show Graph", key="show_graph_button"):
+                st.session_state["graph_display"] = True
+
+
+
+            # Check if "Show Graph" was clicked and display the graph
+            if st.session_state.get("graph_display", False):
+                UIComponents.show_graph(result_df)
         else:
-            st.info("No records found matching your query.")
+            st.warning("Query executed but returned no results.")
 
     @staticmethod
-    def setup_page(config):
-        st.set_page_config(page_title=config.PAGE_TITLE, layout=config.LAYOUT)
-        if 'input_text' not in st.session_state:
-            st.session_state.input_text = ""
-    
+    def show_graph(df: pd.DataFrame):
+        """Generate and display a graph."""
+        st.subheader("Data Visualization")
+        numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
+        categorical_cols = df.select_dtypes(include=['object', 'string']).columns.tolist()
+
+        if not numeric_cols and not categorical_cols:
+            st.warning("No suitable columns available for plotting.")
+            return
+
+        # Dropdown for selecting the plot type
+        plot_type = st.selectbox("Select Plot Type", ["Bar", "Pie", "Scatter", "Line"], key="plot_type")
+
+        # Generate plots based on selection
+        if plot_type == "Bar":
+            x_col = st.selectbox("Select X-axis Column", categorical_cols, key="x_col_bar")
+            y_col = st.selectbox("Select Y-axis Column", numeric_cols, key="y_col_bar")
+            fig = px.bar(df, x=x_col, y=y_col, title=f"Bar Chart: {y_col} by {x_col}")
+
+        elif plot_type == "Pie":
+            category_col = st.selectbox("Select Category Column", categorical_cols, key="pie_col")
+            fig = px.pie(df, names=category_col, title=f"Pie Chart: Distribution of {category_col}")
+
+        elif plot_type == "Scatter":
+            x_col = st.selectbox("Select X-axis Column", numeric_cols, key="x_col_scatter")
+            y_col = st.selectbox("Select Y-axis Column", numeric_cols, key="y_col_scatter")
+            fig = px.scatter(df, x=x_col, y=y_col, title=f"Scatter Plot: {y_col} vs {x_col}")
+
+        elif plot_type == "Line":
+            x_col = st.selectbox("Select X-axis Column", categorical_cols + numeric_cols, key="x_col_line")
+            y_col = st.selectbox("Select Y-axis Column", numeric_cols, key="y_col_line")
+            fig = px.line(df, x=x_col, y=y_col, title=f"Line Chart: {y_col} vs {x_col}")
+
+        # Display the plot
+        st.plotly_chart(fig, use_container_width=True)
+
+
     @staticmethod
-    def display_header():
-        st.title("📝 Text to SQL Converter")
-    
-    @staticmethod
-    def display_example_queries():
-        with st.expander("See example queries"):
-            st.markdown("""
-            Try these example queries:
-            - Show all completed programs
-            - Find programs in January
-            - List all programs with more than 50 attendees
-            - Show programs in New York state
-            - Display programs by speaker John
-            """)
-    
-    @staticmethod
-    def get_user_input(voice_service) -> str:
-        st.write("💭 **Enter Query (Text or Voice)**")
-        col1, col2 = st.columns([6, 1])
-        
-        with col1:
-            input_text = st.text_input(
-                "Enter your query:",
-                value=st.session_state.input_text,
-                placeholder="e.g., 'Show all completed programs' or 'Find programs in January'",
-                key="query_input"
-            )
-        
-        with col2:
-            if st.button("🎙️ Speak", help="Click to speak your query"):
-                voice_text = voice_service.record_and_transcribe()
-                if voice_text:
-                    st.session_state.input_text = voice_text
-                    st.rerun()
-        
-        return st.session_state.input_text or input_text
+    def display_error_message(message: str):
+        """Display an error message."""
+        st.error(message)
