@@ -1,12 +1,13 @@
+#config.py
+
 class Config:
-    """Configuration settings for the application"""
     AZURE_API_KEY = "4076f9d9575544e384c754dd47ecf804"
     AZURE_API_VERSION = "2024-05-01-preview"
     AZURE_ENDPOINT = "https://newkeyss.openai.azure.com/"
     DATA_FILE = "dataset_meeting.xlsx"
-    PAGE_TITLE = "Text to SQL Converter"
+    PAGE_TITLE = "Zion AI Chatbot"
     LAYOUT = "wide"
-    
+
     SCHEMA = """
     CREATE TABLE ProgramData (
         ProgramCode VARCHAR(20),
@@ -30,6 +31,6 @@ class Config:
         Responses TEXT,
         LASTMODIFIEDDATE DATETIME,
         SurveyTaker_Rep VARCHAR(100),
-        Admin_Fee DECIMAL(10, 2)
+        Admin Fee DECIMAL(10, 2)
     );
     """
